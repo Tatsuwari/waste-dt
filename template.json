@@ -1,0 +1,67 @@
+{
+    "GlUER": [
+        {
+            "id": 0,
+            "machine": "7450",
+            "products": [
+                {
+                    "id": 0,
+                    "name": "12 CT",
+                    "scale_factor": 3.3
+                },
+                {
+                    "id": 1,
+                    "name": "13 CT",
+                    "scale_factor": 2.6
+                }
+            ]
+        },{
+            "id": 1,
+            "machine": "7415",
+            "products": [
+                {
+                    "id": 0,
+                    "name": "CFA 4 CUP",
+                    "scale_factor": 5
+                }
+            ]
+        },{
+            "id": 2,
+            "machine": "7439",
+            "products": [
+                {
+                    "id": 0,
+                    "name": "20PC",
+                    "scale_factor": 3.3
+                }
+            ]
+        },{
+            "id": 3,
+            "machine": "7420",
+            "products": [
+                {
+                    "id": 0,
+                    "name": "2 CT",
+                    "scale_factor": 2.3
+                },
+                {
+                    "id": 1,
+                    "name": "4 CT",
+                    "scale_factor": 1.4
+                }
+            ]
+        },{
+            "id": 4,
+            "machine": "7446",
+            "products": [
+                {
+                    "id": 0,
+                    "name": "6 CT",
+                    "scale_factor": 3.5
+                }
+            ]
+        }
+    ],
+    "FORMING": [],
+    "PRINTING": []
+}
