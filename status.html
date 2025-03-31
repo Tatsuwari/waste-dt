@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Production Dashboard</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Global styles */
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: #f4f7f9;
+      color: #333;
+    }
+    header {
+      background: #007BFF;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    /* Layout container */
+    #container {
+      display: flex;
+      height: calc(100vh - 70px);
+    }
+    /* Sidebar navigation */
+    nav {
+      background: #343a40;
+      width: 250px;
+      padding: 1rem;
+      color: #fff;
+    }
+    nav h3 { margin-top: 0; }
+    nav ul { list-style: none; padding: 0; }
+    nav ul li { margin: 1rem 0; cursor: pointer; }
+    nav ul li:hover { text-decoration: underline; }
+    /* Main content area */
+    main {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    /* Card style sections */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 { margin-top: 0; }
+    .input-group {
+      margin: 0.5rem 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .input-group input[type="number"],
+    .input-group input[type="range"],
+    .input-group select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    .btn:hover { background: #0056b3; }
+    .hidden { display: none; }
+    /* Chart container styling */
+    .chart-container {
+      position: relative;
+      margin: auto;
+      height: 300px;
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Production Dashboard</h1>
+  </header>
+  <div id="container">
+    <nav>
+      <h3>Navigation</h3>
+      <ul>
+        <li onclick="showSection('shiftStatus')">Shift Status</li>
+        <li onclick="showSection('wasteCalc')">Waste Calculator</li>
+        <li onclick="showSection('charts')">Charts</li>
+        <li onclick="toggleSettings()">Settings</li>
+      </ul>
+    </nav>
+    <main>
+      <!-- Shift Status Section -->
+      <section id="shiftStatus" class="card">
+        <h2>Shift Status & Production</h2>
+        <p id="shiftInfo">No active shift.</p>
+        <div class="input-group">
+          <label for="actualProductionInput">Actual Production:</label>
+          <input type="number" id="actualProductionInput" placeholder="Enter production" />
+        </div>
+        <div class="input-group">
+          <label for="productionSlider">Production Slider:</label>
+          <input type="range" id="productionSlider" min="0" max="300000" value="0" oninput="syncSlider(this.value)" />
+        </div>
+        <button class="btn" onclick="updateProduction()">Update Production</button>
+        <button class="btn" onclick="recordProduction()">Record Production</button>
+        <p id="productionStatus"></p>
+        <p id="updateTime"></p>
+        <p id="machineRateDisplay"></p>
+      </section>
+      
+      <!-- Waste Calculator Section -->
+      <section id="wasteCalc" class="card hidden">
+        <h2>Waste Calculator</h2>
+        <div class="input-group">
+          <label for="startWeight">Start Weight:</label>
+          <input type="number" id="startWeight" placeholder="Start weight" />
+        </div>
+        <div class="input-group">
+          <label for="endWeight">End Weight:</label>
+          <input type="number" id="endWeight" placeholder="End weight" />
+        </div>
+        <button class="btn" onclick="calculateWaste()">Calculate Waste</button>
+        <p id="wasteResult"></p>
+      </section>
+      
+      <!-- Charts Section -->
+      <section id="charts" class="card hidden">
+        <h2>Production Charts</h2>
+        <div>
+          <button class="btn" onclick="showChart('current')">Current Shift</button>
+          <button class="btn" onclick="showChart('overall')">Overall (Weekly)</button>
+        </div>
+        <div class="chart-container">
+          <canvas id="currentChart"></canvas>
+        </div>
+        <div class="chart-container hidden">
+          <canvas id="overallChart"></canvas>
+        </div>
+        <p id="offsetInfo" style="text-align:center; font-weight:bold;"></p>
+        <button class="btn hidden" id="downloadReportBtn" onclick="downloadWeeklyReport()">Download Weekly Report</button>
+      </section>
+      
+      <!-- Settings Section -->
+      <section id="settingsSection" class="card hidden">
+        <h2>Settings</h2>
+        <div class="input-group">
+          <label for="shiftTargetInput">Daily Shift Target (units):</label>
+          <input type="number" id="shiftTargetInput" value="260000" />
+        </div>
+        <div class="input-group">
+          <label for="machineSpeedInput">Machine Speed (units per hour):</label>
+          <input type="number" id="machineSpeedInput" value="34000" />
+        </div>
+        <div class="input-group">
+          <label for="scaleFactorSelect">Scale Factor (Select):</label>
+          <select id="scaleFactorSelect"></select>
+        </div>
+        <div class="input-group">
+          <label for="updateDelayInput">Update Interval (ms):</label>
+          <input type="number" id="updateDelayInput" value="5000" />
+        </div>
+        <div class="input-group">
+          <label>
+            <input type="checkbox" id="autoUpdateCheckbox" />
+            Enable Auto–Update (Lock–in)
+          </label>
+        </div>
+        <button class="btn" onclick="updateSettings()">Save Settings</button>
+      </section>
+    </main>
+  </div>
+  
+  <script>
+    /*===============================
+      Global Variables & Constants
+    ===============================*/
+    let shiftTarget = 260000;            // Daily production target per shift (260,000 units)
+    let machineSpeed = 34000;            // Auto-update speed (default 34,000 units/hr)
+    // Predefined scale factor options (hard-coded to prevent tampering)
+    const scaleFactorOptions = [
+      { name: "name", value: 14 }
+    ];
+    let scaleFactor = 14;                // Default scale factor
+    let actualProduction = 0;            // Current production value
+    let wasteAmount = 0;                 // Latest waste calculation
+    const shiftHours = 8;                // Shift duration in hours
+    const weeklyTarget = shiftTarget * 3 * 5;  // Weekly target: (260,000 * 3 shifts * 5 days)
+    // Expected production per hour for current shift = shiftTarget / shiftHours
+    let expectedProdSoFar = 0;           // Calculated expected production (per shift)
+    let updateDelay = 5000;              // Update interval (ms)
+    let updateTimer;
+    let currentSection = 'shiftStatus';
+    let autoUpdateEnabled = false;       // Flag for auto-update (lock–in)
+    
+    /* Production history: One record per day per shift.
+       Structure: { date, timestamp, shift, operator, production } */
+    let operatorProductionHistory = JSON.parse(localStorage.getItem("operatorProductionHistory")) || [];
+    // Waste history – stored in localStorage.
+    let wasteHistory = JSON.parse(localStorage.getItem("wasteHistory")) || [];
+    
+    /* Chart instances */
+    let currentChartInstance, overallChartInstance;
+    let activeChart = 'current';
+    
+    /*===============================
+      UI & Navigation Functions
+    ===============================*/
+    function showSection(sectionId) {
+      document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(sectionId).classList.remove('hidden');
+      currentSection = sectionId;
+    }
+    
+    function toggleSettings() {
+      document.getElementById("settingsSection").classList.toggle("hidden");
+    }
+    
+    // Populate the scale factor select list.
+    function populateScaleFactorSelect() {
+      const select = document.getElementById("scaleFactorSelect");
+      select.innerHTML = "";
+      scaleFactorOptions.forEach(opt => {
+        const optionElem = document.createElement("option");
+        optionElem.value = opt.value;
+        optionElem.textContent = `${opt.name} (${opt.value})`;
+        select.appendChild(optionElem);
+      });
+      select.value = scaleFactor;
+    }
+    
+    // Synchronize slider with number input.
+    function syncSlider(val) {
+      document.getElementById("actualProductionInput").value = val;
+      actualProduction = parseFloat(val);
+      updateStatus();
+    }
+    
+    /*===============================
+      Core Functions
+    ===============================*/
+    
+    // Called when production is manually updated.
+    function updateProduction() {
+      actualProduction = parseFloat(document.getElementById("actualProductionInput").value) || 0;
+      document.getElementById("productionSlider").value = actualProduction;
+      updateStatus();
+    }
+    
+    // Record production for the current day/shift.
+    // Only one record per day per shift is kept.
+    function recordProduction() {
+      const now = new Date();
+      const shiftName = "Morning Shift"; // For demo, fixed shift.
+      const dateStr = now.toISOString().split("T")[0];
+      const productionValue = Math.floor(actualProduction);
+      const recordIndex = operatorProductionHistory.findIndex(rec => rec.shift === shiftName && rec.date === dateStr);
+      if (recordIndex > -1) {
+        operatorProductionHistory[recordIndex].production = productionValue;
+        operatorProductionHistory[recordIndex].timestamp = now.toISOString();
+      } else {
+        operatorProductionHistory.push({
+          date: dateStr,
+          timestamp: now.toISOString(),
+          shift: shiftName,
+          operator: "Operator 1", // Default operator
+          production: productionValue
+        });
+      }
+      localStorage.setItem("operatorProductionHistory", JSON.stringify(operatorProductionHistory));
+      alert(`Production recorded for ${shiftName} on ${dateStr}`);
+    }
+    
+    // Update shift status.
+    function updateStatus() {
+      const now = new Date();
+      // For demo, assume active shift is fixed: 07:00 to 15:00.
+      const activeShift = {
+        name: "Morning Shift",
+        start: new Date(new Date().setHours(7, 0, 0, 0)),
+        end: new Date(new Date().setHours(15, 0, 0, 0))
+      };
+      // Calculate elapsed time in minutes since shift start.
+      let elapsedMinutes = (now - activeShift.start) / 60000;
+      if (elapsedMinutes < 0) elapsedMinutes = 0;
+      // Expected production (per shift) = (elapsed time in hours) * (shiftTarget/shiftHours)
+      expectedProdSoFar = Math.floor((elapsedMinutes / 60) * (shiftTarget / shiftHours));
+      
+      // Auto-update production if enabled.
+      if (autoUpdateEnabled) {
+        // Use machineSpeed (units/hr) for auto–increment.
+        const autoIncrement = machineSpeed * updateDelay / 3600000;
+        actualProduction += autoIncrement;
+      }
+      
+      // Update UI.
+      document.getElementById("shiftInfo").innerHTML =
+        `<strong>${activeShift.name}</strong><br>
+         Shift Time: ${activeShift.start.toLocaleTimeString()} - ${activeShift.end.toLocaleTimeString()}<br>
+         Daily Target: ${shiftTarget.toLocaleString()} units<br>
+         Expected Production: ${expectedProdSoFar.toLocaleString()} units`;
+         
+      document.getElementById("productionStatus").textContent =
+        actualProduction < expectedProdSoFar ?
+          `You are behind by ${expectedProdSoFar - Math.floor(actualProduction)} units.` :
+          `You are ahead by ${Math.floor(actualProduction) - expectedProdSoFar} units.`;
+          
+      document.getElementById("updateTime").textContent = "Last updated: " + now.toLocaleTimeString();
+      // Display current machine rate per minute.
+      document.getElementById("machineRateDisplay").textContent =
+          "Machine Rate: " + (machineSpeed / 60).toFixed(1) + " units/min";
+      
+      // Keep slider and input in sync.
+      document.getElementById("actualProductionInput").value = Math.floor(actualProduction);
+      document.getElementById("productionSlider").value = Math.floor(actualProduction);
+      
+      updateCharts();
+      updateOffsetInfo();
+    }
+    
+    // Waste Calculator: compute waste.
+    function calculateWaste() {
+      const startW = parseFloat(document.getElementById("startWeight").value);
+      const endW = parseFloat(document.getElementById("endWeight").value);
+      if (isNaN(startW) || isNaN(endW)) {
+        document.getElementById("wasteResult").textContent = "Enter valid weights.";
+        return;
+      }
+      wasteAmount = (endW - startW) * scaleFactor;
+      document.getElementById("wasteResult").innerHTML = `Waste Amount: ${wasteAmount.toLocaleString()} units<br>
+         Waste Percentage: ${((wasteAmount/shiftTarget)*100).toFixed(2)}%`;
+      const record = { timestamp: new Date().toISOString(), waste: wasteAmount };
+      wasteHistory.push(record);
+      localStorage.setItem("wasteHistory", JSON.stringify(wasteHistory));
+      updateCharts();
+    }
+    
+    /*===============================
+      Weekly Data & Report Functions
+    ===============================*/
+    function getCurrentWeek() {
+      const now = new Date();
+      const day = now.getDay();
+      const diffToMonday = (day === 0 ? -6 : 1 - day);
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      monday.setHours(0,0,0,0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23,59,59,999);
+      return { start: monday, end: sunday };
+    }
+    
+    function getWeeklyProduction() {
+      const history = JSON.parse(localStorage.getItem("operatorProductionHistory")) || [];
+      const { start, end } = getCurrentWeek();
+      return history.reduce((sum, rec) => {
+        const recDate = new Date(rec.timestamp);
+        return (recDate >= start && recDate <= end) ? sum + rec.production : sum;
+      }, 0);
+    }
+    
+    function getWeeklyWaste() {
+      const history = JSON.parse(localStorage.getItem("wasteHistory")) || [];
+      const { start, end } = getCurrentWeek();
+      return history.reduce((sum, rec) => {
+        const recDate = new Date(rec.timestamp);
+        return (recDate >= start && recDate <= end) ? sum + rec.waste : sum;
+      }, 0);
+    }
+    
+    function downloadWeeklyReport() {
+      const { start, end } = getCurrentWeek();
+      const opHistory = (JSON.parse(localStorage.getItem("operatorProductionHistory")) || [])
+                          .filter(rec => {
+                            const recDate = new Date(rec.timestamp);
+                            return recDate >= start && recDate <= end;
+                          });
+      const wHistory = (JSON.parse(localStorage.getItem("wasteHistory")) || [])
+                          .filter(rec => {
+                            const recDate = new Date(rec.timestamp);
+                            return recDate >= start && recDate <= end;
+                          });
+      const weeklyProd = getWeeklyProduction();
+      const weeklyWaste = getWeeklyWaste();
+      const remaining = Math.max(weeklyTarget - (weeklyProd + weeklyWaste), 0);
+      
+      let csv = "Operator Production Report (Weekly)\n";
+      csv += "Timestamp,Date,Shift,Operator,Production\n";
+      opHistory.forEach(rec => {
+        csv += `${rec.timestamp},${rec.date},${rec.shift},${rec.operator},${rec.production}\n`;
+      });
+      csv += "\nWaste Report (Weekly)\n";
+      csv += "Timestamp,Waste\n";
+      wHistory.forEach(rec => {
+        csv += `${rec.timestamp},${rec.waste}\n`;
+      });
+      csv += "\nSummary\n";
+      csv += "Weekly Target,Weekly Production,Weekly Waste,Remaining\n";
+      csv += `${weeklyTarget},${weeklyProd},${weeklyWaste},${remaining}\n`;
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'weekly_report.csv');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    
+    /*===============================
+      Settings & Local Storage
+    ===============================*/
+    function updateSettings() {
+      shiftTarget = parseInt(document.getElementById("shiftTargetInput").value) || shiftTarget;
+      machineSpeed = parseInt(document.getElementById("machineSpeedInput").value) || machineSpeed;
+      scaleFactor = parseFloat(document.getElementById("scaleFactorSelect").value) || scaleFactor;
+      updateDelay = parseInt(document.getElementById("updateDelayInput").value) || updateDelay;
+      document.getElementById("productionSlider").max = shiftTarget + 50000;
+      autoUpdateEnabled = document.getElementById("autoUpdateCheckbox").checked;
+      
+      localStorage.setItem("shiftTarget", shiftTarget);
+      localStorage.setItem("machineSpeed", machineSpeed);
+      localStorage.setItem("scaleFactor", scaleFactor);
+      localStorage.setItem("updateDelay", updateDelay);
+      localStorage.setItem("autoUpdateEnabled", autoUpdateEnabled);
+      
+      clearInterval(updateTimer);
+      updateTimer = setInterval(updateStatus, updateDelay);
+      updateStatus();
+    }
+    
+    function loadSettings() {
+      const storedTarget = localStorage.getItem("shiftTarget");
+      const storedSpeed = localStorage.getItem("machineSpeed");
+      const storedScale = localStorage.getItem("scaleFactor");
+      const storedDelay = localStorage.getItem("updateDelay");
+      const storedAuto = localStorage.getItem("autoUpdateEnabled");
+      if (storedTarget) {
+        shiftTarget = parseInt(storedTarget);
+        document.getElementById("shiftTargetInput").value = shiftTarget;
+        document.getElementById("productionSlider").max = shiftTarget + 50000;
+      }
+      if (storedSpeed) {
+        machineSpeed = parseInt(storedSpeed);
+        document.getElementById("machineSpeedInput").value = machineSpeed;
+      }
+      if (storedScale) {
+        scaleFactor = parseFloat(storedScale);
+      }
+      if (storedDelay) {
+        updateDelay = parseInt(storedDelay);
+        document.getElementById("updateDelayInput").value = updateDelay;
+      }
+      if (storedAuto) {
+        autoUpdateEnabled = storedAuto === "true";
+        document.getElementById("autoUpdateCheckbox").checked = autoUpdateEnabled;
+      }
+    }
+    
+    /*===============================
+      Chart Functions
+    ===============================*/
+    function initCharts() {
+      const ctxCurrent = document.getElementById("currentChart").getContext("2d");
+      currentChartInstance = new Chart(ctxCurrent, {
+        type: 'doughnut',
+        data: {
+          labels: ["Production", "Waste", "Remaining"],
+          datasets: [{
+            data: [Math.floor(actualProduction), wasteAmount, Math.max(shiftTarget - (Math.floor(actualProduction) + wasteAmount), 0)],
+            backgroundColor: ['#007BFF', '#dc3545', '#28a745']
+          }]
+        },
+        options: { responsive: true, animation: false, plugins: { legend: { position: 'bottom' } } }
+      });
+      
+      const ctxOverall = document.getElementById("overallChart").getContext("2d");
+      overallChartInstance = new Chart(ctxOverall, {
+        type: 'doughnut',
+        data: {
+          labels: ["Weekly Production", "Weekly Waste", "Remaining"],
+          datasets: [{
+            data: [getWeeklyProduction(), getWeeklyWaste(), Math.max(weeklyTarget - (getWeeklyProduction() + getWeeklyWaste()), 0)],
+            backgroundColor: ['#007BFF', '#dc3545', '#28a745']
+          }]
+        },
+        options: { responsive: true, animation: false, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+    
+    function updateCharts() {
+      if (currentChartInstance) {
+        const remaining = Math.max(shiftTarget - (Math.floor(actualProduction) + wasteAmount), 0);
+        currentChartInstance.data.datasets[0].data = [Math.floor(actualProduction), wasteAmount, remaining];
+        currentChartInstance.update();
+      }
+      if (overallChartInstance) {
+        const weeklyProd = getWeeklyProduction();
+        const weeklyWaste = getWeeklyWaste();
+        const remaining = Math.max(weeklyTarget - (weeklyProd + weeklyWaste), 0);
+        overallChartInstance.data.datasets[0].data = [weeklyProd, weeklyWaste, remaining];
+        overallChartInstance.update();
+      }
+    }
+    
+    function showChart(view) {
+      activeChart = view;
+      if (view === 'current') {
+        document.getElementById("currentChart").parentNode.classList.remove("hidden");
+        document.getElementById("overallChart").parentNode.classList.add("hidden");
+        document.getElementById("downloadReportBtn").classList.add("hidden");
+      } else {
+        document.getElementById("overallChart").parentNode.classList.remove("hidden");
+        document.getElementById("currentChart").parentNode.classList.add("hidden");
+        document.getElementById("downloadReportBtn").classList.remove("hidden");
+      }
+    }
+    
+    function updateOffsetInfo() {
+      const offset = expectedProdSoFar - Math.floor(actualProduction);
+      const offsetEl = document.getElementById("offsetInfo");
+      if (offset > 0) {
+        offsetEl.textContent = `Offset: ${offset.toLocaleString()} units behind expected rate.`;
+      } else if (offset < 0) {
+        offsetEl.textContent = `Offset: ${Math.abs(offset).toLocaleString()} units ahead of expected rate.`;
+      } else {
+        offsetEl.textContent = `Offset: On target.`;
+      }
+    }
+    
+    /*===============================
+      Initialization
+    ===============================*/
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Insert' || e.keyCode === 45) {
+        toggleSettings();
+      }
+    });
+    
+    window.onload = function() {
+      loadSettings();
+      populateScaleFactorSelect();
+      initCharts();
+      updateStatus();
+      updateTimer = setInterval(updateStatus, updateDelay);
+    }
+  </script>
+</body>
+</html>
